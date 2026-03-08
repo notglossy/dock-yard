@@ -1,0 +1,31 @@
+---
+# Replace SERVICE_NAME with the actual service name.
+# Remove comments before committing.
+
+services:
+  service-name:
+    image: org/image:version       # Pin to a specific version tag
+    container_name: service-name
+    restart: unless-stopped
+
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      # Add service-specific env vars here
+
+    volumes:
+      - ${CONFIG_PATH}/service-name:/config
+      - ${DATA_PATH}/service-name:/data
+
+    ports:
+      - "${PORT}:8080"             # Host:Container — document what this port is for
+
+    # Uncomment if using a reverse proxy
+    # networks:
+    #   - proxy
+
+# Uncomment if using a reverse proxy (shared external network)
+# networks:
+#   proxy:
+#     external: true

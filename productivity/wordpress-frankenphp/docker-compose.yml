@@ -1,0 +1,121 @@
+---
+services:
+  db:
+    image: mariadb:11.8
+    container_name: mariadb
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - mariadb:/var/lib/mysql
+      - socket:/run/mysqld/
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_AUTO_UPGRADE: "1"
+    # Adjust memory limits to match your host's available resources
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  wordpress:
+    image: ghcr.io/notglossy/frankenpress:php-8.3-trixie
+    container_name: wordpress
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      SERVER_NAME: ${SERVER_NAME}
+      WORDPRESS_DB_HOST: localhost:/run/mysqld/mysqld.sock # Unix socket (faster)
+      # WORDPRESS_DB_HOST: db:3306                          # TCP (use if removing the socket volume)
+      WORDPRESS_DB_USER: ${MARIADB_USER}
+      WORDPRESS_DB_PASSWORD: ${MARIADB_PASSWORD}
+      WORDPRESS_DB_NAME: ${MARIADB_DATABASE}
+      # Optional: set persistent secret keys/salts.
+      # Generate values at https://api.wordpress.org/secret-key/1.1/salt/
+      # WORDPRESS_AUTH_KEY: ${WORDPRESS_AUTH_KEY}
+      # WORDPRESS_SECURE_AUTH_KEY: ${WORDPRESS_SECURE_AUTH_KEY}
+      # WORDPRESS_LOGGED_IN_KEY: ${WORDPRESS_LOGGED_IN_KEY}
+      # WORDPRESS_NONCE_KEY: ${WORDPRESS_NONCE_KEY}
+      # WORDPRESS_AUTH_SALT: ${WORDPRESS_AUTH_SALT}
+      # WORDPRESS_SECURE_AUTH_SALT: ${WORDPRESS_SECURE_AUTH_SALT}
+      # WORDPRESS_LOGGED_IN_SALT: ${WORDPRESS_LOGGED_IN_SALT}
+      # WORDPRESS_NONCE_SALT: ${WORDPRESS_NONCE_SALT}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_ENVIRONMENT_TYPE', '${WP_ENVIRONMENT_TYPE}');
+        define('WP_SITEURL', '${SITE_URL}');
+        define('WP_HOME', '${SITE_URL}');
+    volumes:
+      - wordpress:/var/www/html
+      - cache:/var/www/html/wp-content/cache
+      - socket:/run/mysqld/
+    depends_on:
+      db:
+        condition: service_healthy
+    # Adjust memory limits to match your host's available resources
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/license.txt" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+  # Optional: Cloudflare Tunnel 
+  # Requires a Cloudflare account and a tunnel token — create one at:
+  # https://one.dash.cloudflare.com/ → Networks → Tunnels
+  # tunnel:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   restart: unless-stopped
+  #   networks:
+  #     - frontend
+  #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  #   depends_on:
+  #     wordpress:
+  #       condition: service_healthy
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: 10m
+  #       max-file: "3"
+
+volumes:
+  mariadb:
+  wordpress:
+  cache:
+  socket:
+
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
