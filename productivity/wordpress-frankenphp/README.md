@@ -18,9 +18,11 @@ docker compose up -d
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `DOMAIN` | Your site's domain (used to build `SERVER_NAME`) | `example.com` |
 | `SITE_URL` | Full public URL of your site | `https://example.com` |
-| `SERVER_NAME` | FrankenPHP server name directive | `example.com, :80` |
 | `WP_ENVIRONMENT_TYPE` | WordPress environment type | `production` |
+| `HTTP_PORT` | Host port mapped to container port 80 | `80` |
+| `HTTPS_PORT` | Host port mapped to container port 443 | `443` |
 | `MARIADB_DATABASE` | Database name | `wordpress` |
 | `MARIADB_USER` | Database user | `wordpress` |
 | `MARIADB_PASSWORD` | Database password | — |

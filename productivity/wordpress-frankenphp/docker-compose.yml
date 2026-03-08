@@ -38,11 +38,15 @@ services:
     image: ghcr.io/notglossy/frankenpress:php-8.3-trixie
     container_name: wordpress
     restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443/tcp"
+      - "${HTTPS_PORT:-443}:443/udp" # HTTP/3 / QUIC
     networks:
       - frontend
       - backend
     environment:
-      SERVER_NAME: ${SERVER_NAME}
+      SERVER_NAME: ${DOMAIN}, :${HTTP_PORT:-80}
       WORDPRESS_DB_HOST: localhost:/run/mysqld/mysqld.sock # Unix socket (faster)
       # WORDPRESS_DB_HOST: db:3306                          # TCP (use if removing the socket volume)
       WORDPRESS_DB_USER: ${MARIADB_USER}
